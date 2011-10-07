@@ -10,14 +10,17 @@ def show(x):
 def separator():
     return '\x1e'
 
-class EvaluateCommand(sublime_plugin.TextCommand):
+class CloEvaluateCommand(sublime_plugin.TextCommand):
 
     def init_client(self):
         try:
-            self.client =  EvaluateClient()
+            self.client = EvaluateClient()
             self.client.start()
         except socket.error, e:
             pass
+
+    def alive(self):
+        return hasattr(self, 'client') and self.client.is_alive()
 
     def run(self, edit):
         if self.view.settings().get('syntax').find('Clojure') < 0:
@@ -25,14 +28,15 @@ class EvaluateCommand(sublime_plugin.TextCommand):
 
         sels = self.view.sel()
 
-        if not hasattr(self, 'client'):
+        if not self.alive():
             self.init_client()
 
-        if hasattr(self, 'client'):
+        if self.alive():
             for sel in sels:
                 string = self.view.substr(sel)
-                resp = self.client.execute(string)
-                show(resp)
+                if len(string) > 0:
+                    resp = self.client.execute(string)
+                    show(resp)
         else:
             show('Can\'t connect to REPL server')
 
@@ -46,7 +50,10 @@ class EvaluateClient(threading.Thread):
 
     def execute(self, string):
         self.pool.put(string)
-        return self.out.get()
+        try:
+            return self.out.get(True, 10)
+        except Queue.Empty, e:
+            return 'Can\'t connect to REPL server'
 
     def send(self, string):
         self.client.send(string)
@@ -65,4 +72,4 @@ class EvaluateClient(threading.Thread):
                 response = self.send(request)
                 self.out.put(response)
         except Exception, e:
-            print e
+            self.out.put('Can\'t connect to REPL server')
