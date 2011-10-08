@@ -5,71 +5,85 @@ import socket
 import Queue
 
 def show(x):
-    sublime.status_message(x)
+    print 'Clojure:', x
 
-def separator():
-    return '\x1e'
+def generate_header(message):
+    count = str(len(message))
+    return '000000'[:-len(count)] + count
+
+def generate_namespace(view):
+    count = str(view.id())
+    # count = "0"
+    return '0000000000'[:-len(count)] + count
+
+def parse_header(header):
+    return int(header)
 
 class CloEvaluateCommand(sublime_plugin.TextCommand):
 
-    def init_client(self):
+    def init_client(self, host='localhost', port=9999):
+        # return
         try:
-            self.client = EvaluateClient()
-            self.client.start()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            sock.connect((host, port))
+            return sock
         except socket.error, e:
-            pass
+            return None
 
-    def alive(self):
-        return hasattr(self, 'client') and self.client.is_alive()
+    def send(self, sock, string):
+        header = generate_header(string)
+        ns = generate_namespace(self.view)
+        sock.send(header)
+        sock.send(ns)
+        sock.send(string)
+
+        header = sock.recv(6)
+        count = parse_header(header)
+
+        return sock.recv(count)
 
     def run(self, edit):
-        if self.view.settings().get('syntax').find('Clojure') < 0:
-            return
+        # return
+        # if self.view.settings().get('syntax').find('Clojure') < 0:
+        #     return
 
         sels = self.view.sel()
+        sock = self.init_client()
 
-        if not self.alive():
-            self.init_client()
-
-        if self.alive():
+        msgs = []
+        if sock:
             for sel in sels:
                 string = self.view.substr(sel)
                 if len(string) > 0:
-                    resp = self.client.execute(string)
-                    show(resp)
+                    try:
+                        response = self.send(sock, string)
+                        show(response)
+                    except Exception, e:
+                        show('Can\'t connect to REPL server')
         else:
             show('Can\'t connect to REPL server')
 
-class EvaluateClient(threading.Thread):
-    def __init__(self, host='localhost', port=9999):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((host, port))
-        self.pool = Queue.Queue()
-        self.out = Queue.Queue()
-        threading.Thread.__init__(self)
+# class EvaluateClient(threading.Thread):
+#     def __init__(self, socket, messages):
+#         self.socket = socket
+#         self.messages = messages
+#         threading.Thread.__init__(self)
 
-    def execute(self, string):
-        self.pool.put(string)
-        try:
-            return self.out.get(True, 10)
-        except Queue.Empty, e:
-            return 'Can\'t connect to REPL server'
+#     def send(self, string):
+#         header = generate_header(string)
+#         self.socket.send(header)
+#         self.socket.send(string)
 
-    def send(self, string):
-        self.client.send(string)
-        self.client.send(separator())
-        response = ''
-        c = ''
-        while c != separator():
-            c = self.client.recv(1)
-            response += c
-        return response[:-1]
+#         header = self.socket.recv(6)
+#         count = parse_header(header)
 
-    def run(self):
-        try:
-            while True:
-                request = self.pool.get()
-                response = self.send(request)
-                self.out.put(response)
-        except Exception, e:
-            self.out.put('Can\'t connect to REPL server')
+#         return self.socket.recv(count)
+
+#     def run(self):
+#         try:
+#             for msg in self.messages:
+#                 response = self.send(msg)
+#                 show(response)
+#         except Exception, e:
+#             show('Can\'t connect to REPL server')
