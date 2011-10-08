@@ -44,9 +44,9 @@ class CloEvaluateCommand(sublime_plugin.TextCommand):
         return sock.recv(count)
 
     def run(self, edit):
-        # return
-        # if self.view.settings().get('syntax').find('Clojure') < 0:
-        #     return
+        return
+        if self.view.settings().get('syntax').find('Clojure') < 0:
+            return
 
         sels = self.view.sel()
         sock = self.init_client()
