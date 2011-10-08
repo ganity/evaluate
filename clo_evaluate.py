@@ -20,6 +20,9 @@ def parse_header(header):
     return int(header)
 
 class CloEvaluateCommand(sublime_plugin.TextCommand):
+    def __init__(self, view):
+        self.on = False
+        sublime_plugin.TextCommand.__init__(self, view)
 
     def init_client(self, host='localhost', port=9999):
         # return
@@ -43,10 +46,17 @@ class CloEvaluateCommand(sublime_plugin.TextCommand):
 
         return sock.recv(count)
 
-    def run(self, edit):
-        return
+    def run(self, edit, toggle=False):
         if self.view.settings().get('syntax').find('Clojure') < 0:
             return
+
+        if toggle:
+            self.on = not self.on
+            show('Evaluation ' + ('On' if self.on else 'Off'))
+            return
+        else:
+            if not self.on:
+                return
 
         sels = self.view.sel()
         sock = self.init_client()
