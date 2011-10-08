@@ -8,5 +8,5 @@ Usage:
  2. Drop ```clo_evaluate.py``` in ```Packages/Default/``` folder.  
  3. Define command in your settings, for example:  
 
-```{ "keys": ["ctrl+alt+x"], "command": "clo_evaluate" , "args": {"toggle": false}}, //for evaluation```
+```{ "keys": ["ctrl+alt+x"], "command": "clo_evaluate" , "args": {"toggle": false}}, //for evaluation```  
 ```{ "keys": ["ctrl+alt+shift+x"], "command": "clo_evaluate" , "args": {"toggle": true}}  //for switching on/off```
