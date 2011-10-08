@@ -1,8 +1,8 @@
 import sublime
 import sublime_plugin
-import threading
+#import threading
 import socket
-import Queue
+#import Queue
 
 def show(x):
     print 'Clojure:', x
